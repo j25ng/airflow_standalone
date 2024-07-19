@@ -43,7 +43,7 @@ with DAG(
 
             mkdir -p $CSV_PATH
             
-            cat ${CNT_PATH} | awk '{print "{{ds}}, "$2", "$1}' > ${CSV_PATH}/csv.csv
+            cat ${CNT_PATH} | awk '{print "{{ds}},"$2","$1}' > ${CSV_PATH}/csv.csv
             """
       #  == awk '{print "{{ds}}, "$2", "$1}' ${CNT_PATH} > ${CSV_PATH}/csv.csv
     )
@@ -51,6 +51,8 @@ with DAG(
     task_to_tmp = BashOperator(
         task_id='to.tmp',
         bash_command="""
+            mysql -u root -pqwer123 -e "
+            "
         """
     )
 
