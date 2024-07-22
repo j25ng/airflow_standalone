@@ -19,7 +19,7 @@ with DAG(
     },
     description='simple bash DAG',
     schedule="10 4 * * *",
-    start_date=datetime(2024, 7, 12),
+    start_date=datetime(2024, 7, 10),
     catchup=True,
     tags=['simple', 'bash', 'etl', 'shop'],
 ) as dag:
@@ -38,27 +38,36 @@ with DAG(
         task_id='to.csv',
         bash_command="""
             echo "to.csv"
-            CNT_PATH=/home/j25ng/data/count/{{ds_nodash}}/count.log
-            CSV_PATH=/home/j25ng/data/csv/{{ds_nodash}}
+            CNT_PATH=~/data/count/{{ds_nodash}}/count.log
+            CSV_PATH=~/data/csv/{{ds_nodash}}
 
-            mkdir -p $CSV_PATH
-            
-            cat ${CNT_PATH} | awk '{print "{{ds}},"$2","$1}' > ${CSV_PATH}/csv.csv
-            """
-      #  == awk '{print "{{ds}}, "$2", "$1}' ${CNT_PATH} > ${CSV_PATH}/csv.csv
+            cat $CNT_PATH | awk '{print "^{{ds}}^,^" $2 "^,^" $1 "^"}' > ${CSV_PATH}/csv.csv
+        """
+    )
+
+    task_create_table = BashOperator(
+        task_id='create.table',
+        bash_command="""
+            SQL={{ var.value.SQL_PATH }}/create_db_table.sql
+            MYSQL_PWD='{{ var.value.DB_PASSWD }}' mysql -u root < $SQL
+        """
     )
 
     task_to_tmp = BashOperator(
         task_id='to.tmp',
         bash_command="""
-            mysql -u root -pqwer123 -e "
-            "
-        """
-    )
+            echo "to.tmp"
+            CSV_FILE=~/data/csv/{{ds_nodash}}/csv.csv
+            bash {{ var.value.SH_HOME }}/csv2mysql.sh $CSV_FILE {{ds}}
+        """    
+        )
 
     task_to_base = BashOperator(
         task_id='to.base',
         bash_command="""
+            echo "to.base"
+            SQL={{ var.value.SQL_PATH }}/temp2base.sql
+            MYSQL_PWD='{{ var.value.DB_PASSWD }}' mysql -u root < $SQL
         """
     )
 
@@ -76,7 +85,6 @@ with DAG(
         trigger_rule="one_failed"
     )
 
-    task_start >> task_check
-    task_check >> task_to_csv >> task_to_tmp >> task_to_base >> task_make_done
-    task_check >> task_err
+    task_start >> task_check >> [task_to_csv, task_err]
+    task_to_csv >> task_create_table >> task_to_tmp >> task_to_base >> task_make_done
     [task_make_done, task_err] >> task_end
