@@ -17,7 +17,7 @@ with DAG(
         'retries': 1,
         'retry_delay': timedelta(seconds=3)
     },
-    description='simple bash DAG',
+    description='import db DAG',
     schedule="10 4 * * *",
     start_date=datetime(2024, 7, 10),
     catchup=True,
@@ -30,7 +30,10 @@ with DAG(
 
     task_check = BashOperator(
         task_id='check',
-        bash_command="bash {{var.value.CHECK_SH}} {{ds_nodash}}"
+        bash_command="""
+            DONE_PATH=/home/j25ng/data/done/{{ds_nodash}}/_DONE
+            bash {{ var.value.CHECK_SH }} $DONE_PATH
+        """
    # == bash_command="bash /home/j25ng/airflow/dags/check.sh 20240718"
     )
 
@@ -66,14 +69,21 @@ with DAG(
         task_id='to.base',
         bash_command="""
             echo "to.base"
-            SQL={{ var.value.SQL_PATH }}/temp2base.sql
-            MYSQL_PWD='{{ var.value.DB_PASSWD }}' mysql -u root < $SQL
+            bash {{ var.value.SH_HOME }}/tmp2base.sh {{ds}}
         """
     )
 
     task_make_done = BashOperator(
         task_id='make.done',
         bash_command="""
+            figlet "make.done.start"
+
+            DONE_PATH={{ var.value.IMPORT_DONE_PATH }}/{{ds_nodash}}
+            mkdir -p ${DONE_PATH}
+            echo "IMPORT_DONE_PATH=$DONE_PATH"
+            touch ${DONE_PATH}/_DONE
+
+            figlet "make.done.end"
         """
     )
 
