@@ -10,6 +10,9 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
+# import func
+from movie.api.call import gen_url, req, get_key, req2list, list2df, save2df
+
 with DAG(
     'movie',
     # These args will get passed on to each operator
@@ -26,26 +29,23 @@ with DAG(
     tags=['movie'],
 ) as dag:
 
-    def print_context(ds=None, **kwargs):
-        """Print the Airflow context and ds variable from the context."""
-        print("::group::All kwargs")
-        pprint(kwargs)
-        print("::endgroup::")
-        print("::group::Context variable ds")
+    def get_data(ds, **kwargs):
         print(ds)
-        print("::endgroup::")
-        return "Whatever you return gets printed in the logs"
-
-    run_this = PythonOperator(task_id="print_the_context", python_callable=print_context)
+        pprint(kwargs)
+        print(f"ds_nodash => {kwargs['ds_nodash']}")
+        key = get_key()
+        print(f"MOVIE_API_KEY => {key}")
+        date = kwargs['ds_nodash']
+        df = save2df(date)
+        print(df.head(5))
     
     # t1, t2 and t3 are examples of tasks created by instantiating operators
     task_start = EmptyOperator(task_id='start')
     task_end = EmptyOperator(task_id='end', trigger_rule="all_done")
 
-    task_get_data = BashOperator(
+    task_get_data = PythonOperator(
         task_id='get.data',
-        bash_command="""
-        """
+        python_callable=get_data
     )
     
     task_save_data = BashOperator(
@@ -55,4 +55,3 @@ with DAG(
     )
 
     task_start >> task_get_data >> task_save_data >> task_end
-    task_start >> run_this >> task_end
