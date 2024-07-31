@@ -22,7 +22,7 @@ with DAG(
     # These args will get passed on to each operator
     # You can override them on a per-task basis during operator initialization
     default_args={
-        'depends_on_past': True,
+        'depends_on_past': False,
         'email_on_failure': False,
         'email_on_retry': False,
         'retries': 1,
@@ -68,6 +68,12 @@ with DAG(
     # t1, t2 and t3 are examples of tasks created by instantiating operators
     start = EmptyOperator(task_id='start')
     end = EmptyOperator(task_id='end', trigger_rule="all_done")
+
+    multi_y = EmptyOperator(task_id='multi.y')
+    multi_n = EmptyOperator(task_id='multi.n')
+    nation_k = EmptyOperator(task_id='nation.k')
+    nation_f = EmptyOperator(task_id='nation.f')
+
     join_task = BashOperator(
         task_id='join',
         bash_command="exit 1",
@@ -110,8 +116,9 @@ with DAG(
     start >> branch_op
     start >> join_task >> save_data
 
-    branch_op >> rm_dir >> get_data 
-    branch_op >> echo_task
-    branch_op >> get_data
+    branch_op >> rm_dir >> [get_data, multi_y, multi_n, nation_k, nation_f]
+    branch_op >> echo_task >> save_data
+    branch_op >> [get_data, multi_y, multi_n, nation_k, nation_f]
 
-    get_data >> save_data >> end
+    [get_data, multi_y, multi_n, nation_k, nation_f] >> save_data >> end
+
