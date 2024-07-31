@@ -1,50 +1,44 @@
 from datetime import datetime, timedelta
 from textwrap import dedent
+from pprint import pprint
 
 # The DAG object; we'll need this to instantiate a DAG
 from airflow import DAG
-from pprint import pprint
 
 # Operators; we need this to operate!
 from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import (
         PythonOperator,
-        PythonVirtualenvOperator
+        PythonVirtualenvOperator,
+        BranchPythonOperator
     )
 
 # import func
-from movie.api.call import gen_url, req, get_key, req2list, list2df, save2df
+#from movie.api.call import gen_url, req, get_key, req2list, list2df, save2df
 
 with DAG(
     'movie',
     # These args will get passed on to each operator
     # You can override them on a per-task basis during operator initialization
     default_args={
-        'depends_on_past': False,
+        'depends_on_past': True,
+        'email_on_failure': False,
+        'email_on_retry': False,
         'retries': 1,
         'retry_delay': timedelta(seconds=3)
     },
-    description='import db DAG',
-    schedule="10 4 * * *",
+    description='movie DAG',
+    schedule="10 2 * * *",
     start_date=datetime(2024, 7, 24),
     catchup=True,
     tags=['movie'],
 ) as dag:
 
-    def print_context(ds=None, **kwargs):
-        """Print the Airflow context and ds variable from the context."""
-        print("::group::All kwargs")
-        print(kwargs)
-        print("::endgroup::")
-        print("::group::Context variable ds")
-        print(ds)
-        print("::endgroup::")
-        return "Whatever you return gets printed in the logs"
-
     def get_data(ds, **kwargs):
         print(ds)
         print(kwargs)
+        from movie.api.call import gen_url, req, get_key, req2list, list2df, save2df
         print(f"ds_nodash => {kwargs['ds_nodash']}")
         key = get_key()
         print(f"MOVIE_API_KEY => {key}")
@@ -52,44 +46,72 @@ with DAG(
         df = save2df(date)
         print(df.head(5))
 
-    def branch_fun(**kwargs):
-        ld = kwargs['ds_nodash']
+    def save_data(ds_nodash):
+        from movie.api.call import apply_type2df
+        df = apply_type2df(load_dt=ds_nodash)
+
+        g = df.groupby('openDt')
+        sum_df = g.agg({'audiCnt': 'sum'}).reset_index()
+        print(sum_df)
+
+    def branch_fun(ds_nodash):
         import os
-        if os.path.exists(f'~/tmp/test_parquet/load_dt={ld}'):
-            return rm_dir 
+        home_dir = os.path.expanduser("~")
+        path = os.path.join(home_dir, f"tmp/test_parquet/loadDt={ds_nodash}")
+
+       #if os.path.exists(f'~/tmp/test_parquet/load_dt={ld}')
+        if os.path.exists(path):
+            return "rm.dir"
         else:
-            return get_data
+            return "get.data", "echo.task"
+
+    # t1, t2 and t3 are examples of tasks created by instantiating operators
+    start = EmptyOperator(task_id='start')
+    end = EmptyOperator(task_id='end', trigger_rule="all_done")
+    join_task = BashOperator(
+        task_id='join',
+        bash_command="exit 1",
+        trigger_rule="all_done"
+    )
+
+    get_data = PythonVirtualenvOperator(
+        task_id='get.data',
+        trigger_rule="all_done",
+        python_callable=get_data,
+        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        system_site_packages=False,
+        #venv_cache_path="/home/j25ng/tmp2/airflow_venv/get_data"
+    )
+    
+    save_data = PythonVirtualenvOperator(
+        task_id='save.data',
+        trigger_rule="one_success",
+        python_callable=save_data,
+        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        system_site_packages=False,
+        #venv_cache_path="/home/j25ng/tmp2/airflow_venv/get_data"
+    )
+
     branch_op = BranchPythonOperator(
         task_id="branch.op",
         python_callable=branch_fun,
     )
 
-    run_this = PythonOperator(
-        task_id="print_the_context",
-        python_callable=print_context,
-    )
-    
-    # t1, t2 and t3 are examples of tasks created by instantiating operators
-    task_start = EmptyOperator(task_id='start')
-    task_end = EmptyOperator(task_id='end', trigger_rule="all_done")
-
-    task_get_data = PythonVirtualenvOperator(
-        task_id='get.data',
-        python_callable=get_data,
-        requirements=["git+https://github.com/j25ng/movie.git@0.2/api"],
-        system_site_packages=False,
-    )
-    
-    task_save_data = BashOperator(
-        task_id='save.data',
-        bash_command='date'
-    )
-
     rm_dir = BashOperator(
         task_id='rm.dir',
-        bash_command='rm -rf ~/tmp/test_parquet/load_dt={{ ds_nodash }}'
+        bash_command='rm -rf ~/tmp/test_parquet/loadDt={{ ds_nodash }}'
     )
 
-    task_start >> branch_op
-    branch_op >> rm_dir >> task_get_data
-    branch_op >> task_get_data >> task_save_data >> task_end
+    echo_task = BashOperator(
+        task_id="echo.task",
+        bash_command="echo 'task'"
+    )
+
+    start >> branch_op
+    start >> join_task >> save_data
+
+    branch_op >> rm_dir >> get_data 
+    branch_op >> echo_task
+    branch_op >> get_data
+
+    get_data >> save_data >> end
