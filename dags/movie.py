@@ -35,15 +35,9 @@ with DAG(
     tags=['movie'],
 ) as dag:
 
-    def get_data(ds, **kwargs):
-        print(ds)
-        print(kwargs)
-        from movie.api.call import gen_url, req, get_key, req2list, list2df, save2df
-        print(f"ds_nodash => {kwargs['ds_nodash']}")
-        key = get_key()
-        print(f"MOVIE_API_KEY => {key}")
-        date = kwargs['ds_nodash']
-        df = save2df(date)
+    def get_data(ds_nodash):
+        from movie.api.call import save2df
+        df = save2df(ds_nodash, url_param={"": ""})
         print(df.head(5))
 
     def save_data(ds_nodash):
@@ -61,28 +55,63 @@ with DAG(
 
        #if os.path.exists(f'~/tmp/test_parquet/load_dt={ld}')
         if os.path.exists(path):
-            return "rm.dir"
+            return rm_dir.task_id
         else:
-            return "get.data", "echo.task"
+            return "get.start", "echo.task"
+
+    def fun_param(ds_nodash, url_param):
+        from movie.api.call import save2df
+        df = save2df(ds_nodash, url_param)
+
+        print(df.head(5))
 
     # t1, t2 and t3 are examples of tasks created by instantiating operators
     start = EmptyOperator(task_id='start')
     end = EmptyOperator(task_id='end', trigger_rule="all_done")
 
-    multi_y = EmptyOperator(task_id='multi.y')
-    multi_n = EmptyOperator(task_id='multi.n')
-    nation_k = EmptyOperator(task_id='nation.k')
-    nation_f = EmptyOperator(task_id='nation.f')
+    get_start = EmptyOperator(
+        task_id='get.start',
+        trigger_rule="all_done"
+    )
+    
+    get_end = EmptyOperator(task_id='get.end')
 
-    join_task = BashOperator(
-        task_id='join',
+    multi_y = PythonVirtualenvOperator(
+        task_id='multi.y',
+        python_callable=fun_param,
+        system_site_packages=False,
+        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        op_kwargs={"url_param": {"multiMovieYn": "Y"}}
+    )
+
+    multi_n = PythonVirtualenvOperator(
+        task_id='multi.n',
+        python_callable=fun_param,                                            system_site_packages=False,                                           requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        op_kwargs={"url_param": {"multiMovieYn": "N"}}
+    )
+    
+    nation_k = PythonVirtualenvOperator(
+        task_id='nation.k',
+        python_callable=fun_param,                                            system_site_packages=False,                                           requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        op_kwargs={"url_param": {"repNationCd": "K"}}
+    )
+    
+    nation_f = PythonVirtualenvOperator(
+        task_id='nation.f',
+        python_callable=fun_param,
+        system_site_packages=False,
+        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        op_kwargs={"url_param": {"repNationCd": "F"}}
+    )
+
+    throw_err = BashOperator(
+        task_id='throw.err',
         bash_command="exit 1",
         trigger_rule="all_done"
     )
 
     get_data = PythonVirtualenvOperator(
         task_id='get.data',
-        trigger_rule="all_done",
         python_callable=get_data,
         requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
         system_site_packages=False,
@@ -113,12 +142,13 @@ with DAG(
         bash_command="echo 'task'"
     )
 
-    start >> branch_op
-    start >> join_task >> save_data
+    start >> branch_op >> get_start
+    start >> throw_err >> save_data 
 
-    branch_op >> rm_dir >> [get_data, multi_y, multi_n, nation_k, nation_f]
-    branch_op >> echo_task >> save_data
-    branch_op >> [get_data, multi_y, multi_n, nation_k, nation_f]
+    branch_op >> [rm_dir, echo_task] >> get_start
+    
 
-    [get_data, multi_y, multi_n, nation_k, nation_f] >> save_data >> end
+    get_start >> [get_data, multi_y, multi_n, nation_k, nation_f] >> get_end
+
+    get_end >> save_data >> end
 
