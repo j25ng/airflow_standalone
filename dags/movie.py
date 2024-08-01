@@ -86,13 +86,17 @@ with DAG(
 
     multi_n = PythonVirtualenvOperator(
         task_id='multi.n',
-        python_callable=fun_param,                                            system_site_packages=False,                                           requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        python_callable=fun_param,
+        system_site_packages=False,
+        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
         op_kwargs={"url_param": {"multiMovieYn": "N"}}
     )
     
     nation_k = PythonVirtualenvOperator(
         task_id='nation.k',
-        python_callable=fun_param,                                            system_site_packages=False,                                           requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        python_callable=fun_param,
+        system_site_packages=False,
+        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
         op_kwargs={"url_param": {"repNationCd": "K"}}
     )
     
