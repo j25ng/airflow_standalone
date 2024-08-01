@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from textwrap import dedent
-from pprint import pprint
+from pprint import pprint as pp
 
 # The DAG object; we'll need this to instantiate a DAG
 from airflow import DAG
@@ -29,45 +29,87 @@ with DAG(
     max_active_runs=1,
     max_active_tasks=3,
     description='movie',
-    schedule="10 2 * * *",
+    schedule="30 2 * * *",
     start_date=datetime(2024, 7, 24),
     catchup=True,
     tags=['movie', 'summary'],
 ) as dag:
+    REQUIREMENTS=["git+https://github.com/j25ng/movie.git@0.3/api"]
+
+    #def gen_empty(id):
+    def gen_empty(*ids):
+        tasks = []
+        for id in ids:
+            task = EmptyOperator(task_id=id)
+            tasks.append(task)
+        return tuple(tasks)
+    
+    #def gen_vpython(id):
+    def gen_vpython(**kw):
+        id = kw['id']
+        fn = kw['fn']
+        url = kw['url']
+
+        task = PythonVirtualenvOperator(
+            task_id=id,
+            python_callable=fn,
+            system_site_packages=False,
+            requirements=REQUIREMENTS,
+            op_kwargs={
+                "url_param" : url,
+                }
+            )
+        return task
+
+    def pro_data(**kwargs):
+        print("pro_data")
+        print(kwargs['url_param'])
+
+    def pro_data2(**Kwargs):
+        print(kwargs)
 
     def apply_type():
         return 0
 
     def merge_df():
-        return 0
+        print('merge')
 
     def de_dup():
-        return 0
+        print('de_dup')
 
     def summary_df():
-        return 0
+        print('summary')
 
-    start = EmptyOperator(task_id='start')
-    end = EmptyOperator(task_id='end', trigger_rule="all_done")
+    #start = gen_empty('start')
+    #end = gen_emtpy('end')
+    start, end = gen_empty('start', 'end')
 
-    apply_type = PythonVirtualenvOperator(
-        task_id='apply.type',
-        python_callable=apply_type,
+    apply_type = gen_vpython(
+            id = 'apply.type',
+            fn = pro_data,
+            task_name = 'apply_type!!!',
+            url = { 'multiMovieYn': 'Y' }
     )
 
-    merge_df = PythonVirtualenvOperator(
-        task_id='merge.df',
-        python_callable=merge_df,
+    merge_df = gen_vpython(
+            id = 'merge.df',
+            fn = pro_data,
+            task_name = 'merge_df!!!',
+            url = { 'multiMovieYn': 'Y' }
     )
 
-    de_dup = PythonVirtualenvOperator(
-        task_id='de.dup',
-        python_callable=de_dup,
+    de_dup = gen_vpython(
+            id = 'de.dup', 
+            fn = pro_data, 
+            task_name = 'de_dup!!!',
+            url = { 'multiMovieYn': 'Y' }
     )
 
-    summary_df = PythonVirtualenvOperator(
-        task_id='summary.df',
-        python_callable=summary_df,
+    summary_df = gen_vpython(
+            id = 'summary.df',
+            fn = pro_data,
+            task_name = 'summary_df!!!',
+            url = { 'multiMovieYn': 'Y' }
     )
 
-    start >> apply_type >> merge_df >> de_dup >> summary_df >> end
+start >> apply_type >> merge_df >> de_dup >> summary_df >> end
