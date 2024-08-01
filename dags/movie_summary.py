@@ -34,7 +34,7 @@ with DAG(
     catchup=True,
     tags=['movie', 'summary'],
 ) as dag:
-    REQUIREMENTS=["git+https://github.com/j25ng/movie.git@0.3/api"]
+    REQUIREMENTS=["git+https://github.com/j25ng/mov_agg.git@0.5/agg"]
 
     #def gen_empty(id):
     def gen_empty(*ids):
@@ -65,8 +65,12 @@ with DAG(
         print("pro_data")
         print(kwargs['url_param'])
 
-    def pro_data2(**Kwargs):
-        print(kwargs)
+    def pro_merge(**params):
+        load_dt = params['ds_nodash']
+        from mov_agg.util import merge
+        df = merge(load_dt)
+        prin("*" * 33)
+        print(df)
 
     def apply_type():
         return 0
@@ -112,4 +116,4 @@ with DAG(
             url = { 'multiMovieYn': 'Y' }
     )
 
-start >> apply_type >> merge_df >> de_dup >> summary_df >> end
+    start >> merge_df >> de_dup >> apply_type >> summary_df >> end
