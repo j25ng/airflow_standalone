@@ -59,7 +59,7 @@ with DAG(
     agg_df = BashOperator(
         task_id='agg.df',
         bash_command="""
-            echo "add_df"
+            $SPARK_HOME/bin/spark-submit /home/j25ng/airflow/py/movie_agg_df.py {{ds_nodash}}
         """
     )
 
