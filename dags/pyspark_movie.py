@@ -26,7 +26,7 @@ with DAG(
     description='movie',
     schedule="10 2 * * *",
     start_date=datetime(2015, 1, 1),
-    end_date=datetime(2015, 3, 1),
+    end_date=datetime(2015, 1, 5),
     catchup=True,
     tags=['pyspark', 'movie'],
 ) as dag:
@@ -47,13 +47,12 @@ with DAG(
         python_callable=re_partition,
         system_site_packages=False,
         requirements=["git+https://github.com/j25ng/spark_flow.git"],
-
     )
 
     join_df = BashOperator(
         task_id='join.df',
         bash_command="""
-            echo "join_df"
+            SPARK_HOME/bin/spark-submit /home/j25ng/airflow/py/movie_join_df.py {{ds_nodash}}
         """
     )
 
