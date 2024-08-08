@@ -52,7 +52,7 @@ with DAG(
     join_df = BashOperator(
         task_id='join.df',
         bash_command="""
-            SPARK_HOME/bin/spark-submit /home/j25ng/airflow/py/movie_join_df.py {{ds_nodash}}
+            $SPARK_HOME/bin/spark-submit /home/j25ng/airflow/py/movie_join_df.py {{ds_nodash}}
         """
     )
 
