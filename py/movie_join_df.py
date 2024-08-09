@@ -38,9 +38,9 @@ df3.createOrReplaceTempView("nation_null")
 df_j = spark.sql(f"""
 SELECT
     COALESCE(m.movieCd, n.movieCd) AS movieCd,
-    COALESCE(m.salesAmt, n.salesAmt), -- 매출액
-    COALESCE(m.audiCnt, n.audiCnt), -- 관객수
-    COALESCE(m.showCnt, n.showCnt), --- 사영횟수
+    COALESCE(m.salesAmt, n.salesAmt) AS salesAmt, -- 매출액
+    COALESCE(m.audiCnt, n.audiCnt) AS audiCnt, -- 관객수
+    COALESCE(m.showCnt, n.showCnt) AS showCnt, --- 사영횟수
     multiMovieYn, -- 다양성 영화/상업영화를 구분지어 조회할 수 있습니다. “Y” : 다양성 영화 “N”
     repNationCd, -- 한국/외국 영화별로 조회할 수 있습니다. “K: : 한국영화 “F” : 외국영화
     '{dt}' AS load_dt
