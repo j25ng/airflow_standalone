@@ -10,9 +10,9 @@ df.createOrReplaceTempView("movie")
 
 df_m = spark.sql(f"""
 SELECT
-    sum(salesAmt) as sum_salesAmt,
-    sum(audiCnt) as sum_audiCnt,
-    sum(showCnt) as sum_showCnt,
+    sum(salesAmt) AS salesAmt,
+    sum(audiCnt) AS audiCnt,
+    sum(showCnt) AS showCnt,
     multiMovieYn,
     '{dt}' AS load_dt
 FROM movie
@@ -21,9 +21,9 @@ GROUP BY multiMovieYn
 
 df_n = spark.sql(f"""
 SELECT
-    sum(salesAmt) as sum_salesAmt,
-    sum(audiCnt) as sum_audiCnt,
-    sum(showCnt) as sum_showCnt,
+    sum(salesAmt) AS salesAmt,
+    sum(audiCnt) AS audiCnt,
+    sum(showCnt) AS showCnt,
     repNationCd,
     '{dt}' AS load_dt
 FROM movie
