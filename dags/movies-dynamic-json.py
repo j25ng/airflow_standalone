@@ -31,14 +31,16 @@ with DAG(
     tags=['movis', 'dynamic', 'json'],
 ) as dag:
 
-    def get_data(ds_nodash):
+    def get_data(**kwargs):
         from movdata.movieList import save_movie_json
         
-        year = str(ds_nodash)[:4]
-        file_path = "/home/j25ng/data/json/movie.json"
+        execution_date = kwargs['execution_date']
+        year = execution_date.year
         total_pages = 10
+        file_path = "/home/j25ng/data/json/movie.json"
 
         save_movie_json(year, total_pages, file_path)  
+        return True
 
     def pars_parq():
         pass
@@ -72,5 +74,3 @@ with DAG(
     )
 
     task_start >> task_get_data >> task_pars_parq >> task_sel_parq >> task_end
-
-get_data(20150101)
