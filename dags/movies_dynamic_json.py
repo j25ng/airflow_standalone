@@ -15,7 +15,7 @@ from airflow.operators.python import (
     )
 
 with DAG(
-    'movies-dynamic-json',
+    'movies_dynamic_json',
     # These args will get passed on to each operator
     # You can override them on a per-task basis during operator initialization
     default_args={
@@ -31,22 +31,14 @@ with DAG(
     tags=['movis', 'dynamic', 'json'],
 ) as dag:
 
-    def get_data(**kwargs):
+    def get_data(ds_nodash):
         from movdata.movieList import save_movie_json
-        
-        execution_date = kwargs['execution_date']
-        year = execution_date.year
+        year = str(ds_nodash)[:4]
         total_pages = 10
         file_path = "/home/j25ng/data/json/movie.json"
 
         save_movie_json(year, total_pages, file_path)  
         return True
-
-    def pars_parq():
-        pass
-
-    def sel_parq():
-        pass
 
     # t1, t2 and t3 are examples of tasks created by instantiating operators
     task_start = EmptyOperator(task_id='start')
@@ -59,18 +51,18 @@ with DAG(
         system_site_packages=False,
     )
 
-    task_pars_parq = PythonVirtualenvOperator(
+    task_pars_parq = BashOperator(
         task_id='parsing.parquet',
-        python_callable=pars_parq,
-        requirements=[""],
-        system_site_packages=False,
+        bash_command="""
+            echo "parsing"
+        """
     )
 
-    task_sel_parq = PythonVirtualenvOperator(
+    task_sel_parq = BashOperator(
         task_id='select.parquet',
-        python_callable=sel_parq,
-        requirements=[""],
-        system_site_packages=False,
+        bash_command="""
+            echo "select"
+        """
     )
 
     task_start >> task_get_data >> task_pars_parq >> task_sel_parq >> task_end
