@@ -45,21 +45,21 @@ with DAG(
     task_get_data = PythonVirtualenvOperator(
         task_id='get.data',
         python_callable=get_data,
-        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        requirements=[""],
         system_site_packages=False,
     )
 
     task_parsing_parquet = PythonVirtualenvOperator(
         task_id='parsing.parquet',
         python_callable=parsing_parquet,
-        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        requirements=[""],
         system_site_packages=False,
     )
 
     task_select_parquet = PythonVirtualenvOperator(
         task_id='select.parquet',
         python_callable=select_parquet,
-        requirements=["git+https://github.com/j25ng/movie.git@0.3/api"],
+        requirements=[""],
         system_site_packages=False,
     )
 
