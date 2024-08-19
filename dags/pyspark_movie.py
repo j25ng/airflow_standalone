@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from textwrap import dedent
-from pprint import pprint
 
 # The DAG object; we'll need this to instantiate a DAG
 from airflow import DAG
