@@ -1,26 +1,18 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import explode, col, size
+from pyspark.sql.functions import col, size, explode_outer
+import sys
 
-spark = SparkSession.builder.appName("parsingParquet").getOrCreate()
+APP_NAME = sys.argv[1]
 
-# pyspark 에서 multiline(배열) 구조 데이터 읽기
-jdf = spark.read.option("multiline","true").json('/home/j25ng/data/json/movie.json')
+spark = SparkSession.builder.appName(APP_NAME).getOrCreate()
 
-## companys, directors 값이 다중으로 들어가 있는 경우 찾기 위해 count 컬럼 추가
-ccdf = jdf.withColumn("company_count", size("companys")).withColumn("directors_count", size("directors"))
+jdf = spark.read.option("multiline","true").json('/home/j25ng/code/movdata/data/movies')
 
-# companys, directors 값이 다중으로 들어가 있는 경우 찾기
-fdf = ccdf.filter(ccdf.company_count > 1).filter(ccdf.directors_count > 2)
+edf = jdf.withColumn("company", explode_outer("companys"))
+eedf = edf.withColumn("director", explode_outer("directors"))
+sdf = eedf.withColumn("directorNm", col("director.peopleNm"))
+rdf = sdf.select("movieCd", "movieNm", "genreAlt", "typeNm", "directorNm", "company.companyCd", "company.companyNm")
 
-# 2015년 movieCd 20141663 인 영화는 company_count = 2, directors_count = 3 임
-fdf.collect()[0]['movieCd']
-fdf.collect()[0]['companys'][0]['companyCd']
-fdf.collect()[0]['companys'][0]['companyNm']
-
-# 펼치기
-edf = fdf.withColumn("company", explode("companys"))
-
-# 또 펼치기
-eedf = edf.withColumn("director", explode("directors"))
+rdf.write.mode("overwrite").parquet('/home/j25ng/code/movdata/data/pars')
 
 spark.stop()

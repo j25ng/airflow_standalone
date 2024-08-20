@@ -37,8 +37,7 @@ with DAG(
         total_pages = 10
         file_path = "/home/j25ng/data/json/movie.json"
 
-        save_movie_json(year, total_pages, file_path)  
-        return True
+        save_movie_json(year, total_pages, file_path)
 
     # t1, t2 and t3 are examples of tasks created by instantiating operators
     task_start = EmptyOperator(task_id='start')
@@ -54,14 +53,14 @@ with DAG(
     task_pars_parq = BashOperator(
         task_id='parsing.parquet',
         bash_command="""
-            echo "parsing"
+            $SPARK_HOME/bin/spark-submit /home/j25ng/airflow/py/pars_parq.py parsing_parquet 
         """
     )
 
     task_sel_parq = BashOperator(
         task_id='select.parquet',
         bash_command="""
-            echo "select"
+            $SPARK_HOME/bin/spark-submit /home/j25ng/airflow/py/sel_parq.py select_parquet 
         """
     )
 
