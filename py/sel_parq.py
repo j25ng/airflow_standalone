@@ -10,10 +10,10 @@ df.createOrReplaceTempView("movie")
 df_dir = spark.sql("""
 SELECT
     directorNm,
-    count(directorNm) AS directorCnt
+    count(directorNm) AS count
 FROM movie
 GROUP BY directorNm
-ORDER BY directorCnt DESC
+ORDER BY count DESC
 """)
 df_dir.write.mode('overwrite').parquet("/home/j25ng/code/movdata/data/sel/director")
 
@@ -21,10 +21,10 @@ df_com = spark.sql("""
 SELECT
     companyCd,
     companyNm,
-    count(companyCd) AS companyCnt
+    count(companyCd) AS count 
 FROM movie
 GROUP BY companyCd, companyNm
-ORDER BY companyCnt DESC
+ORDER BY count DESC
 """)
 df_com.write.mode('overwrite').parquet("/home/j25ng/code/movdata/data/sel/company")
 
