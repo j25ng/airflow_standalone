@@ -46,7 +46,7 @@ with DAG(
         task_id="copy.log",
         bash_command="""
             mkdir -p ~/data/{{ds_nodash}}
-            cp ~/history_{{ds_nodash}}*.log ~/data/{{ds_nodash}}/
+            cp ~/save_log/history_{{ds_nodash}}*.log ~/data/{{ds_nodash}}/
         """
     )
 
